@@ -1,9 +1,11 @@
+import random
 import re
+import time
 
 from bs4 import BeautifulSoup
 import pandas as pd
-import asyncio
 from urllib.parse import urlencode
+from selenium import webdriver
 
 BASE_URL = 'https://www.tripadvisor.ru/FindRestaurants'
 params = {
@@ -13,20 +15,36 @@ params = {
     'broadened': 'false'
 }
 
-async def get_html(page, offset) -> str:
-    current_params = params.copy()
-    current_params['offset'] = str(offset)
-    url = f"{BASE_URL}?{urlencode(current_params)}"
+restaurants = []
 
-    await page.goto(url, wait_until='networkidle', timeout=60000)
+# Trip Advisor яростно сопротивляется парсингу с него, поэтому добавлены опции для имитации человеческого реального браузера
+# source https://stackoverflow.com/questions/76611310/how-to-mimic-like-a-human-while-using-selenium-webdriver
+def get_driver():
+    options = webdriver.ChromeOptions()
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_experimental_option('useAutomationExtension', False)
+    options.add_argument('--window-size=1920,1080')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36')
 
-    html = await page.content()
+    driver = webdriver.Chrome(options=options)
+
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+    return driver
+
+def get_html(driver, url: str) -> str:
+
+    try:
+        driver.get(url)
+        html = driver.page_source
+    except Exception as e:
+        return ''
 
     return html
 
-def parse_restaurants(html):
+def parse_restaurants(html: str) -> None:
     soup = BeautifulSoup(html, 'html.parser')
-    restaurants = []
 
     cards = soup.select('[data-automation="restaurantCard"]')
     for card in cards:
@@ -69,8 +87,23 @@ def parse_restaurants(html):
 
 
 def main():
-    with open('bbb.html', 'r', encoding='utf-8') as f:
-        parse_restaurants(f.read())
+    driver = get_driver()
+    for i in range(0, 300):
+        offset = i * 30
+        current_params = params.copy()
+        current_params['offset'] = str(offset)
+        url = f"{BASE_URL}?{urlencode(current_params)}"
+
+        html = get_html(driver, url)
+        parse_restaurants(html)
+
+        delay = random.uniform(2, 5) # имитация случайно задержки между переходами
+        time.sleep(delay)
+
+    driver.quit()
+
+    df = pd.DataFrame(restaurants)
+    df.to_csv('./data/ta_restaurants.csv', index=False, encoding='utf-8')
 
 
 
