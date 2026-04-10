@@ -30,6 +30,8 @@ def parse_restaurants(html):
 
     cards = soup.select('[data-automation="restaurantCard"]')
     for card in cards:
+        is_sponsored = card.has_attr('data-sponsored')
+
         rating_div = card.select_one('div[data-automation="bubbleRatingValue"]')
         rating = "N/A"
 
@@ -47,8 +49,23 @@ def parse_restaurants(html):
                 numbers = re.findall(r'\d+', review_count_text)
                 review_count = int(''.join(numbers))
 
-        print(rating)
-        print(review_count)
+        cuisine_type = ''
+        details_span = card.select_one('span.f span')
+        if details_span:
+            cuisine_type = details_span.get_text(strip=True)
+
+        price = ''
+        price_span = card.select_one('div.biqBm > span.biGQs')
+        if price_span:
+            price = price_span.get_text(strip=True)
+
+        restaurants.append({
+            'rating': rating,
+            'reviews_count': review_count,
+            'cuisine_type': cuisine_type,
+            'price': price,
+            'is_sponsored': is_sponsored,
+        })
 
 
 def main():
