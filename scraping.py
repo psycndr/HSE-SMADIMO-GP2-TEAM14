@@ -1,11 +1,14 @@
 import random
 import re
 import time
+import logging
 
 from bs4 import BeautifulSoup
 import pandas as pd
 from urllib.parse import urlencode
 from selenium import webdriver
+
+logging.basicConfig(level=logging.DEBUG, filename="./logs/ta_scraping.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s", encoding="utf-8")
 
 BASE_URL = 'https://www.tripadvisor.ru/FindRestaurants'
 params = {
@@ -38,7 +41,10 @@ def get_html(driver, url: str) -> str:
     try:
         driver.get(url)
         html = driver.page_source
+        logging.info(f'Успешное обращение к страницу {url}')
+        logging.debug(html)
     except Exception as e:
+        logging.error(e)
         return ''
 
     return html
@@ -88,6 +94,7 @@ def parse_restaurants(html: str) -> None:
 
 def main():
     driver = get_driver()
+    logging.info('Начало скрапинга')
     for i in range(0, 300):
         offset = i * 30
         current_params = params.copy()
@@ -99,6 +106,7 @@ def main():
 
         delay = random.uniform(2, 5) # имитация случайно задержки между переходами
         time.sleep(delay)
+    logging.info('Скрапинг завершен')
 
     driver.quit()
 
