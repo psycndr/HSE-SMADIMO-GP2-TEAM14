@@ -92,7 +92,7 @@ def main():
         offset = i * 30
         current_params = params.copy()
         current_params['offset'] = str(offset)
-        url = f"{BASE_URL}?{urlencode(current_params)}"
+        url = f'{BASE_URL}?{urlencode(current_params)}'
 
         html = get_html(driver, url)
         parse_restaurants(html)
